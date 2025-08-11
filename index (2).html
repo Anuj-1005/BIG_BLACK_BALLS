@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Color Quiz Game - Admin Panel</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #f7f7f7;
+      margin: 0; padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      color: #333;
+    }
+
+    .container {
+      background: white;
+      padding: 30px 40px;
+      border-radius: 20px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.12);
+      max-width: 500px;
+      width: 100%;
+      text-align: center;
+    }
+
+    h1 {
+      color: #FF6600;
+      margin-bottom: 30px;
+      text-shadow: 1px 1px 3px rgba(255, 102, 0, 0.5);
+    }
+
+    .counts {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      margin-bottom: 30px;
+    }
+
+    .count-box {
+      background: #FFCC00;
+      color: #333;
+      border-radius: 15px;
+      padding: 20px;
+      flex: 1 1 45%;
+      margin: 8px 0;
+      font-weight: 700;
+      font-size: 1.2rem;
+      box-shadow: 0 6px 12px rgba(255, 204, 0, 0.5);
+      user-select: none;
+      transition: box-shadow 0.3s ease;
+    }
+    .count-box.highlight {
+      box-shadow: 0 0 20px 5px rgba(255, 102, 0, 0.8);
+    }
+    .count-box.saffron { background: #FF9933; color: white; }
+    .count-box.green { background: #009933; color: white; }
+    .count-box.white { background: #FFFFFF; color: #333; border: 2px solid #ccc; }
+    .count-box.blue { background: #0057FF; color: white; }
+    .count-box.red { background: #FF3B3B; color: white; }
+    .count-box.yellow { background: #FFCC00; color: #333; }
+
+    .notifications {
+      margin-bottom: 20px;
+      font-weight: 600;
+      font-size: 1.1rem;
+      color: #008000;
+      min-height: 30px;
+      user-select: text;
+      transition: all 0.3s ease;
+    }
+
+    .fastest-info, .most-answered {
+      margin-bottom: 25px;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #333;
+      background: #f0f0f0;
+      border-radius: 12px;
+      padding: 15px;
+      text-align: left;
+      user-select: text;
+    }
+
+    button {
+      cursor: pointer;
+      border: none;
+      font-weight: 700;
+      font-size: 1.1rem;
+      border-radius: 15px;
+      padding: 14px 25px;
+      margin: 0 15px 0 0;
+      transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+      box-shadow: 0 10px 20px rgba(255, 102, 0, 0.4);
+      color: white;
+      user-select: none;
+    }
+
+    #startBtn {
+      background-color: #FF6600;
+    }
+    #startBtn:hover {
+      background-color: #FF5500;
+      transform: translateY(-3px);
+      box-shadow: 0 15px 25px rgba(255, 85, 0, 0.6);
+    }
+    #startBtn:active {
+      transform: scale(0.95);
+      box-shadow: 0 7px 15px rgba(255, 85, 0, 0.7);
+    }
+
+    #resetBtn {
+      background-color: #c0392b;
+    }
+    #resetBtn:hover {
+      background-color: #a93226;
+      transform: translateY(-3px);
+      box-shadow: 0 15px 25px rgba(169, 50, 38, 0.7);
+    }
+    #resetBtn:active {
+      transform: scale(0.95);
+      box-shadow: 0 7px 15px rgba(169, 50, 38, 0.9);
+    }
+
+    #log {
+      margin-top: 20px;
+      font-family: monospace;
+      font-size: 0.9rem;
+      max-height: 150px;
+      overflow-y: auto;
+      background: #eee;
+      padding: 12px 15px;
+      border-radius: 12px;
+      color: #555;
+      text-align: left;
+      user-select: text;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>India Quiz Game Admin</h1>
+
+    <div class="counts" id="countsDiv">
+      <!-- color counts inserted here -->
+    </div>
+
+    <div class="notifications" id="notifications"></div>
+
+    <div class="fastest-info" id="fastestInfo">Fastest answer: --</div>
+    <div class="most-answered" id="mostAnswered">Most answered color: --</div>
+
+    <button id="startBtn">Start Round</button>
+    <button id="resetBtn">Reset Game</button>
+
+    <div id="log"></div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyB8hNeYCaCUDEb442816H7m5czjU_p7yvk",
+      authDomain: "space-nut.firebaseapp.com",
+      databaseURL: "https://space-nut-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "space-nut",
+      storageBucket: "space-nut.firebasestorage.app",
+      messagingSenderId: "361367330680",
+      appId: "1:361367330680:web:4feeea30968b766b2b328d"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const colors = ["Saffron", "Green", "White", "Blue", "Red", "Yellow"];
+
+    const countsDiv = document.getElementById('countsDiv');
+    const notificationsDiv = document.getElementById('notifications');
+    const fastestInfoDiv = document.getElementById('fastestInfo');
+    const mostAnsweredDiv = document.getElementById('mostAnswered');
+    const startBtn = document.getElementById('startBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const logDiv = document.getElementById('log');
+
+    function log(msg) {
+      const time = new Date().toLocaleTimeString();
+      logDiv.textContent = `[${time}] ${msg}\n` + logDiv.textContent;
+    }
+
+    // Fetch players and update UI
+    async function fetchData() {
+      const snapshot = await db.ref('players').once('value');
+      const players = snapshot.val() || {};
+
+      // Count players per color
+      const counts = colors.reduce((acc, c) => { acc[c] = 0; return acc; }, {});
+
+      // Track answered per color & fastest player/time
+      const answeredCounts = colors.reduce((acc, c) => { acc[c] = 0; return acc; }, {});
+      let fastestPlayer = null;
+      let fastestTime = Number.MAX_SAFE_INTEGER;
+
+      Object.entries(players).forEach(([uid, p]) => {
+        if (p.color && counts.hasOwnProperty(p.color)) {
+          counts[p.color]++;
+          if (p.answered) answeredCounts[p.color]++;
+          if (p.fastest && p.timeTaken != null && p.timeTaken < fastestTime) {
+            fastestTime = p.timeTaken;
+            fastestPlayer = { uid, color: p.color, timeTaken: p.timeTaken };
+          }
+        }
+      });
+
+      updateCountsUI(counts);
+      updateNotifications(counts);
+      updateFastestInfo(fastestPlayer);
+      updateMostAnswered(answeredCounts);
+      log(`Data refreshed. Total players: ${Object.keys(players).length}`);
+    }
+
+    function updateCountsUI(counts) {
+      countsDiv.innerHTML = '';
+      colors.forEach(c => {
+        const div = document.createElement('div');
+        div.className = `count-box ${c.toLowerCase()}`;
+        div.textContent = `${c}: ${counts[c]} / 12`;
+        countsDiv.appendChild(div);
+      });
+    }
+
+    function updateNotifications(counts) {
+      const total = Object.values(counts).reduce((a,b) => a+b, 0);
+      if (total >= 70) {
+        notificationsDiv.textContent = `🚀 Great! ${total} players joined — ready to start the game!`;
+        notificationsDiv.style.color = '#007700';
+      } else if (total >= 50) {
+        notificationsDiv.textContent = `⚠️ Notice: ${total} players joined — approaching full house!`;
+        notificationsDiv.style.color = '#AA7700';
+      } else {
+        notificationsDiv.textContent = `Players Joined: ${total}`;
+        notificationsDiv.style.color = '#333';
+      }
+    }
+
+    function updateFastestInfo(player) {
+      if (!player) {
+        fastestInfoDiv.textContent = 'Fastest answer: --';
+      } else {
+        fastestInfoDiv.textContent = `Fastest answer: ${player.uid} (${player.color}) — ${player.timeTaken.toFixed(2)} sec`;
+      }
+    }
+
+    function updateMostAnswered(answeredCounts) {
+      const maxCount = Math.max(...Object.values(answeredCounts));
+      const mostColors = Object.entries(answeredCounts)
+        .filter(([_, val]) => val === maxCount && maxCount > 0)
+        .map(([key]) => key);
+
+      if (maxCount === 0) {
+        mostAnsweredDiv.textContent = 'Most answered color: --';
+      } else if (mostColors.length === 1) {
+        mostAnsweredDiv.textContent = `Most answered color: ${mostColors[0]} (${maxCount})`;
+      } else {
+        mostAnsweredDiv.textContent = `Most answered colors: ${mostColors.join(', ')} (${maxCount})`;
+      }
+    }
+
+   startBtn.onclick = async () => {
+  try {
+    log('Admin clicked Start Round');
+
+    // 1. Fetch current round number (or start with 0 if none)
+    const roundSnapshot = await db.ref('gameStatus/roundNumber').once('value');
+    let roundNumber = roundSnapshot.val() || 0;
+    roundNumber++; // increment for new round
+
+    // 2. Reset player states
+    const playersSnapshot = await db.ref('players').once('value');
+    const players = playersSnapshot.val() || {};
+
+    const updates = {};
+    Object.keys(players).forEach(uid => {
+      updates[`players/${uid}/answered`] = false;
+      updates[`players/${uid}/fastest`] = false;
+      updates[`players/${uid}/timeTaken`] = null;
+    });
+
+    // 3. Update gameStatus with new roundNumber and roundStarted=true
+    updates['gameStatus/roundNumber'] = roundNumber;
+    updates['gameStatus/roundStarted'] = true;
+
+    // 4. Commit all updates atomically
+    await db.ref().update(updates);
+
+    alert(`Round ${roundNumber} started!`);
+    log(`Round ${roundNumber} started and player states reset.`);
+
+  } catch (error) {
+    console.error('Error starting round:', error);
+    alert('Error starting round, check console.');
+  }
+};
+
+
+    resetBtn.onclick = () => {
+      if (confirm('Are you sure you want to reset the game? This will remove all player data.')) {
+        db.ref('players').remove().then(() => {
+          log('Game reset: All player data removed');
+        });
+      }
+    };
+
+    // Auto refresh every 5 seconds
+    fetchData();
+    setInterval(fetchData, 5000);
+  </script>
+</body>
+</html>
