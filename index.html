@@ -152,14 +152,21 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // Reset detection: listen for players node removed (game reset)
+    // Reset detection with loop prevention
     db.ref('players').on('value', snapshot => {
       if (!snapshot.exists()) {
-        localStorage.removeItem('playerUID');
-        localStorage.removeItem('playerColor');
+        if (!localStorage.getItem('gameResetHandled')) {
+          localStorage.setItem('gameResetHandled', 'true');
 
-        alert("Game has been reset by admin. You will need to enter your name and color again.");
-        location.reload();
+          localStorage.removeItem('playerUID');
+          localStorage.removeItem('playerColor');
+
+          alert("Game has been reset by admin. You will need to enter your name and color again.");
+          location.reload();
+        }
+      } else {
+        // Reset the flag when players exist
+        localStorage.removeItem('gameResetHandled');
       }
     });
 
